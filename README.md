@@ -104,6 +104,7 @@ Available Commands:
   portfw      Forward ports through a MASQUE tunnel
   register    Register a new client and enroll a device key
   socks       Expose Warp as a SOCKS5 proxy
+  ssh         SSH through the MASQUE tunnel
 
 Flags:
   -c, --config string   config file (default is config.json) (default "config.json")
@@ -244,6 +245,46 @@ route add ::/0 [TUNNEL_GATEWAY] metric 1 if [TUN_INTERFACE_INDEX]
 > [!CAUTION]
 > Always be careful with default routes, especially if you are running this on a headless machine. It is very easy to close yourself out of your current session. I suggest [network namespaces](https://man7.org/linux/man-pages/man7/network_namespaces.7.html) on Linux as a safer playground for experiments or a spare VM with physical access or serial console.
 > On Windows, you can set specific routes first such as `8.8.8.8/32` to ensure the tunnel works before adding a default route.
+
+### SSH Mode (direct SSH through tunnel)
+
+If you want to directly SSH to a machine inside the tunnel network, `usque ssh` provides a simple way to establish an SSH connection through the MASQUE tunnel. This is similar to Tailscale's SSH functionality.
+
+Usage:
+
+```shell
+$ ./usque ssh root@100.64.0.2
+```
+
+With a custom port:
+
+```shell
+$ ./usque ssh root@100.64.0.2:2222
+```
+
+You can also use flags to override individual parts:
+
+```shell
+$ ./usque ssh 100.64.0.2 -l myuser -p 2222
+```
+
+The SSH command will automatically establish a MASQUE tunnel and forward the SSH traffic through it. The target can be any IP address or hostname reachable through the tunnel.
+
+You can provide the SSH password using the `-w` / `--password` flag. For example:
+
+```shell
+$ ./usque ssh root@100.64.0.2 -w mypassword
+```
+
+> [!NOTE]
+> The SSH mode uses a userspace TCP/IP stack (`netstack`) which may have compatibility issues with some SSH servers or network configurations. If you encounter connection issues, try using the SOCKS5 proxy mode instead:
+> ```shell
+> # Terminal 1: Start SOCKS5 proxy
+> ./usque socks
+> 
+> # Terminal 2: SSH through the proxy
+> ssh -o ProxyCommand="nc -X 5 -x 127.0.0.1:1080 %h %p" root@100.64.0.2
+> ```
 
 ### SOCKS5 Proxy Mode (easy, cross-platform)
 
